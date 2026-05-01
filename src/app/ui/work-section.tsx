@@ -88,7 +88,7 @@ function ProjectCard({ item, heightClass }: ProjectCardProps) {
 }
 
 export default async function WorkSection() {
-  const projects: PortfolioItem[] = await client.fetch(PORTFOLIO_QUERY)
+  const projects: PortfolioItem[] = await client.fetch(PORTFOLIO_QUERY, {}, { next: { revalidate: 30 } })
 
   const [first, second, third, fourth] = projects
 
