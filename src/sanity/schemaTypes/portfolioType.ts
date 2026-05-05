@@ -53,6 +53,48 @@ export const portfolioType = defineType({
       type: 'number',
       description: 'Lower numbers appear first.',
     }),
+    defineField({
+      name: 'subtitle',
+      title: 'Subtitle',
+      type: 'string',
+      description: 'Short tagline shown on the detail page.',
+    }),
+    defineField({
+      name: 'description',
+      title: 'Description',
+      type: 'text',
+      rows: 5,
+      description: 'Project overview shown on the detail page.',
+    }),
+    defineField({
+      name: 'client',
+      title: 'Client',
+      type: 'string',
+    }),
+    defineField({
+      name: 'year',
+      title: 'Year',
+      type: 'string',
+    }),
+    defineField({
+      name: 'link',
+      title: 'Live URL',
+      type: 'url',
+    }),
+    defineField({
+      name: 'gallery',
+      title: 'Gallery',
+      type: 'array',
+      of: [
+        {
+          type: 'image',
+          options: { hotspot: true },
+          fields: [
+            defineField({ name: 'alt', title: 'Alt text', type: 'string' }),
+          ],
+        },
+      ],
+    }),
   ],
   orderings: [
     {

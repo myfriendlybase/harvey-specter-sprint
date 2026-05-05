@@ -1,14 +1,18 @@
-const post1Img = "https://www.figma.com/api/mcp/asset/342d1835-abca-48a7-a7ca-91bb05feb7ea";
-const post2Img = "https://www.figma.com/api/mcp/asset/7cabe990-f01b-4952-a40e-254593521320";
-const post3Img = "https://www.figma.com/api/mcp/asset/68a94317-6e18-4f67-8198-4d6411611109";
+import { client } from '@/sanity/lib/client';
+import { urlFor } from '@/sanity/lib/image';
+import { NewsHeadingAnimation, NewsCardAnimation } from './news-animations';
 
-const posts = [
-  { img: post1Img, offset: false },
-  { img: post2Img, offset: true  },
-  { img: post3Img, offset: false },
-];
+interface PostPreview {
+  _id: string;
+  title: string;
+  slug: { current: string };
+  excerpt?: string;
+  coverImage?: { asset: { _ref: string }; alt?: string };
+}
 
-const description = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.";
+const QUERY = `*[_type == "post"] | order(publishedAt desc)[0..2] {
+  _id, title, slug, excerpt, coverImage
+}`
 
 function ArrowUpRight() {
   return (
@@ -18,54 +22,76 @@ function ArrowUpRight() {
   );
 }
 
-function ReadMore() {
+function ReadMore({ href }: { href: string }) {
   return (
-    <a href="#" className="flex gap-[10px] items-center border-b border-black pb-1 w-fit group">
+    <a href={href} className="flex gap-[10px] items-center border-b border-black pb-1 w-fit group/link">
       <span className="font-medium text-[14px] text-black tracking-[-0.56px] leading-normal">Read more</span>
-      <ArrowUpRight />
+      <span className="transition-transform duration-300 ease-out group-hover/link:translate-x-1 group-hover/link:-translate-y-1">
+        <ArrowUpRight />
+      </span>
     </a>
   );
 }
 
-function PostCard({ img, description: desc, offset }: { img: string; description: string; offset: boolean }) {
+function PostCard({ post, offset }: { post: PostPreview; offset: boolean }) {
+  const imgSrc = post.coverImage?.asset
+    ? urlFor(post.coverImage).width(706).url()
+    : null;
+
   return (
-    <div className={`flex flex-col gap-4 items-start${offset ? " md:pt-[120px]" : ""}`}>
-      <div className="relative w-full h-[398px] md:h-[469px] overflow-hidden shrink-0">
-        <img src={img} alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none" />
+    <a href={`/news/${post.slug.current}`} className={`group flex flex-col gap-4 items-start${offset ? ' md:pt-[120px]' : ''}`}>
+      <div className="relative w-full h-[398px] md:h-[469px] overflow-hidden shrink-0 bg-[#e8e8e8]">
+        {imgSrc && (
+          <img
+            src={imgSrc}
+            alt={post.coverImage?.alt ?? post.title}
+            className="absolute inset-0 w-full h-full object-cover pointer-events-none transition-transform duration-700 ease-out group-hover:scale-105"
+          />
+        )}
+        <div className="absolute inset-0 bg-black/0 transition-colors duration-500 group-hover:bg-black/10" />
       </div>
-      <p className="font-normal text-[14px] text-[#1f1f1f] tracking-[-0.56px] leading-[1.3]">{desc}</p>
-      <ReadMore />
-    </div>
+      <p className="font-normal text-[14px] text-[#1f1f1f] tracking-[-0.56px] leading-[1.3] transition-opacity duration-300 group-hover:opacity-70">
+        {post.excerpt ?? post.title}
+      </p>
+      <ReadMore href={`/news/${post.slug.current}`} />
+    </a>
   );
 }
 
-export default function NewsSection() {
+export default async function NewsSection() {
+  const posts: PostPreview[] = await client.fetch(QUERY, {}, { next: { revalidate: 30 } });
+
+  if (!posts.length) return null;
+
+  const offsets = [false, true, false];
+
   return (
     <section id="news" className="bg-[#f3f3f3]">
 
       {/* ── Desktop ─────────────────────────────────────────── */}
       <div className="hidden md:flex items-end gap-[250px] pl-8 py-[120px] overflow-hidden">
-
-        {/* Rotated heading — stays fixed on the left */}
-        <div className="flex h-[706px] w-[110px] items-center justify-center shrink-0">
-          <div className="-rotate-90 whitespace-nowrap">
-            <p className="font-light text-black uppercase tracking-[-5.12px] leading-[0.86] text-[64px]">
-              Keep up with my latest
-            </p>
-            <p className="font-light text-black uppercase tracking-[-5.12px] leading-[0.86] text-[64px]">
-              news &amp; achievements
-            </p>
+        <NewsHeadingAnimation>
+          <div className="flex h-[706px] w-[110px] items-center justify-center shrink-0">
+            <div className="-rotate-90 whitespace-nowrap">
+              <p className="font-light text-black uppercase tracking-[-5.12px] leading-[0.86] text-[64px]">
+                Keep up with my latest
+              </p>
+              <p className="font-light text-black uppercase tracking-[-5.12px] leading-[0.86] text-[64px]">
+                news &amp; achievements
+              </p>
+            </div>
           </div>
-        </div>
+        </NewsHeadingAnimation>
 
-        {/* Horizontally scrollable cards — fixed width per card, 3rd crops at edge */}
         <div className="overflow-x-auto no-scrollbar flex-1">
           <div className="flex items-start gap-[31px] w-max pr-8">
             {posts.map((post, i) => (
-              <div key={post.img} className="contents">
+              <div key={post._id} className="contents">
                 {i > 0 && <div className="w-px bg-black/20 shrink-0 h-[469px] self-start" />}
                 <div className="w-[353px] shrink-0">
-                  <PostCard img={post.img} description={description} offset={post.offset} />
+                  <NewsCardAnimation delay={i * 0.12}>
+                    <PostCard post={post} offset={offsets[i] ?? false} />
+                  </NewsCardAnimation>
                 </div>
               </div>
             ))}
@@ -75,14 +101,18 @@ export default function NewsSection() {
 
       {/* ── Mobile ──────────────────────────────────────────── */}
       <div className="md:hidden flex flex-col gap-8 px-4 py-16">
-        <p className="font-light text-black uppercase tracking-[-2.56px] leading-[0.86] text-[32px]">
-          Keep up with my latest news &amp; achievements
-        </p>
+        <NewsHeadingAnimation>
+          <p className="font-light text-black uppercase tracking-[-2.56px] leading-[0.86] text-[32px]">
+            Keep up with my latest news &amp; achievements
+          </p>
+        </NewsHeadingAnimation>
         <div className="overflow-x-auto no-scrollbar -mx-4 px-4">
           <div className="flex gap-4 w-max">
-            {posts.map((post) => (
-              <div key={post.img} className="w-[300px] shrink-0">
-                <PostCard img={post.img} description={description} offset={false} />
+            {posts.map((post, i) => (
+              <div key={post._id} className="w-[300px] shrink-0">
+                <NewsCardAnimation delay={i * 0.12}>
+                  <PostCard post={post} offset={false} />
+                </NewsCardAnimation>
               </div>
             ))}
           </div>
